@@ -15,7 +15,7 @@
         <button onclick="setLevel(4)">Уровень 4: Гиростабилизация</button>
         <button onclick="setLevel(5)">Уровень 5: Магнус</button>
         <button onclick="toggleWall()">Стенка</button>
-        <button id="toggleCoriolis" onclick="toggleCoriolisEffect()">Включить кориолис</button>
+        <button id="toggleCoriolis" onclick="toggleCoriolisEffect()"></button>
     </div>
     
     <div class="wind-controls">
@@ -85,7 +85,7 @@
                 }
 
                 if(currentLevel >=5) {
-                    const magnusCoefficient = 0.01; // Настройте этот коэффициент по вашему усмотрению
+                    const magnusCoefficient = 1; // Настройте этот коэффициент по вашему усмотрению
             const liftForce = magnusCoefficient * this.spin * Math.sqrt(this.vx**2 + this.vy**2);
             this.vy += liftForce; // Возвышающая сила действует вверх
             this.vx -= liftForce; // Изменяет направление по горизонту
