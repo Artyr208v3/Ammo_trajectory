@@ -14,8 +14,8 @@
         <button onclick="setLevel(3)">Уровень 3: Сопр. воздуха</button>
         <button onclick="setLevel(4)">Уровень 4: Гиростабилизация</button>
         <button onclick="setLevel(5)">Уровень 5: Магнус</button>
+        <button onclick="setLevel(6)">Уровень 5: Кориолис</button>
         <button onclick="toggleWall()">Стенка</button>
-        <button id="toggleCoriolis" onclick="toggleCoriolisEffect()"> Включить кориолис</button>
     </div>
     
     <div class="wind-controls">
@@ -35,7 +35,7 @@
         let environment = {
             wind: { active: false, force: 0.5, angle: 0 },
             wall: { x: 0, y: 0, width: 20, height: 0 },
-            coriolisEffectEnabled: false,
+            latitude: 55 // Широта для эффекта Кориолиса
         };
         
         class Bullet {
@@ -47,7 +47,7 @@
                 this.vx = (targetX - startX) * 0.1;
                 this.vy = (targetY - startY) * 0.1;
                 this.active = true;
-                this.spin = 3000; // Гироскопическое вращение
+                this.spin = 0.001; // Гироскопическое вращение
                 this.mass = 0.01;
                 this.diameter = 0.01;
                 this.stable = true;
@@ -85,11 +85,16 @@
                 }
 
                 if(currentLevel >=5) {
-                    const magnusCoefficient = 1; // Настройте этот коэффициент по вашему усмотрению
-            const liftForce = magnusCoefficient * this.spin * Math.sqrt(this.vx**2 + this.vy**2);
-            this.vy += liftForce; // Возвышающая сила действует вверх
-            this.vx -= liftForce; // Изменяет направление по горизонту
+                    const magnusForce = 0.0001 * this.spin * this.getSpeed();
+            this.vx += magnusForce * (this.vy / this.getSpeed());
+            this.vy -= magnusForce * (this.vx / this.getSpeed());
                 }
+
+                if(currentLevel >= 6) {
+            const omega = 7.29e-5 * Math.sin(environment.latitude * Math.PI/180);
+            this.vx += 2 * omega * this.vy;
+            this.vy -= 2 * omega * this.vx;
+        }
         
                 // Ветер
                 if(environment.wind.active) {
@@ -149,12 +154,6 @@
             environment.wind.active = document.getElementById('windToggle').checked;
             environment.wind.force = parseFloat(document.getElementById('windForce').value);
             environment.wind.angle = parseFloat(document.getElementById('windAngle').value);
-        }
-
-        function toggleCoriolisEffect() {
-            coriolisEffectEnabled = !coriolisEffectEnabled;
-            document.getElementById("toggleCoriolis").textContent = coriolisEffectEnabled ? "Выключить кориолис" : "Включить кориолис";
-            environment.coriolisEffectEnabled = coriolisEffectEnabled;
         }
         
         function animate() {
