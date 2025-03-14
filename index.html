@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>Проект</title>
+
+</head>
+<body>
+    <div class="controls">
+        <button onclick="setLevel(1)">Уровень 1: Базовая</button>
+        <button onclick="setLevel(2)">Уровень 2: Гравитация</button>
+        <button onclick="setLevel(3)">Уровень 3: Сопр. воздуха</button>
+        <button onclick="setLevel(4)">Уровень 4: Гиростабилизация</button>
+        <button onclick="setLevel(5)">Уровень 5: Магнус</button>
+        <button onclick="toggleWall()">Стенка</button>
+        <button id="toggleCoriolis" onclick="toggleCoriolisEffect()">Включить кориолис</button>
+    </div>
+    
+    <div class="wind-controls">
+        <label>Ветер: <input type="checkbox" id="windToggle"></label>
+        <input type="number" id="windForce" value="0.5" step="0.1" style="width: 60px;">
+        <input type="number" id="windAngle" value="0" step="15" style="width: 60px;">
+    </div>
+
+    <div class="info" id="info"></div>
+    <canvas id="canvas"></canvas>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let currentLevel = 1;
+        let bullets = [];
+        let wallExists = false;
+        let environment = {
+            wind: { active: false, force: 0.5, angle: 0 },
+            wall: { x: 0, y: 0, width: 20, height: 0 },
+            coriolisEffectEnabled: false,
+        };
+        
+        class Bullet {
+            constructor(startX, startY, targetX, targetY) {
+                this.x = startX;
+                this.y = startY;
+                this.startX = startX;
+                this.startY = startY;
+                this.vx = (targetX - startX) * 0.1;
+                this.vy = (targetY - startY) * 0.1;
+                this.active = true;
+                this.spin = 3000; // Гироскопическое вращение
+                this.mass = 0.01;
+                this.diameter = 0.01;
+                this.stable = true;
+            }
+        
+            getSpeed() {
+                return Math.sqrt(this.vx**2 + this.vy**2);
+            }
+        
+            getAngle() {
+                return Math.atan2(this.vy, this.vx) * 180/Math.PI;
+            }
+        
+            update() {
+                if (!this.active) return;
+        
+                // Базовые силы
+                if(currentLevel >= 2) this.vy += 0.3;
+        
+                // Сопротивление воздуха (исправленное)
+                if(currentLevel >= 3) {
+                    const drag = 0.5 * 1.225 * 0.3 * Math.PI * (this.diameter/2)**2 * this.getSpeed()**2;
+                    this.vx -= (drag * this.vx / this.getSpeed()) / this.mass;
+                    this.vy -= (drag * this.vy / this.getSpeed()) / this.mass;
+                }
+        
+                // Гироскопическая стабильность
+                if(currentLevel >= 4) {
+                    const stabilityFactor = (this.spin * this.diameter) / (this.getSpeed() * 1000);
+                    this.stable = stabilityFactor > 1.5;
+                    if(!this.stable) {
+                        this.vx *= 1 + (Math.random()-0.5)*0.1;
+                        this.vy *= 1 + (Math.random()-0.5)*0.1;
+                    }
+                }
+        
+                // Ветер
+                if(environment.wind.active) {
+                    const rad = environment.wind.angle * Math.PI/180;
+                    this.vx += Math.cos(rad) * environment.wind.force * 0.1;
+                    this.vy += Math.sin(rad) * environment.wind.force * 0.1;
+                }
+
+                if(environment.coriolisEffectEnabled) {
+                const coriolisFactor = 0.0001;
+                this.vx += coriolisFactor * this.vy;
+                this.vy -= coriolisFactor * this.vx;
+                }
+        
+                // Столкновение со стеной
+                if(wallExists && this.x > environment.wall.x && 
+                   this.x < environment.wall.x + environment.wall.width &&
+                   this.y > environment.wall.y && 
+                   this.y < environment.wall.y + environment.wall.height) {
+                    this.vx *= -0.7;
+                    this.x = environment.wall.x + (this.vx > 0 ? environment.wall.width : -5);
+                }
+        
+                // Границы поля
+                if(this.x < 0 || this.x > canvas.width || this.y > canvas.height) {
+                    this.active = false;
+                }
+        
+                this.x += this.vx;
+                this.y += this.vy;
+            }
+        
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 3, 0, Math.PI*2);
+                ctx.fillStyle = this.stable ? '#ff5555' : '#ff0000';
+                ctx.fill();
+            }
+        }
+        
+        function setLevel(level) {
+            currentLevel = level;
+            bullets = [];
+        }
+        
+        function toggleWall() {
+            wallExists = !wallExists;
+            environment.wall = {
+                x: canvas.width/2 - 10,
+                y: canvas.height/2 - 100,
+                width: 20,
+                height: 200
+            };
+        }
+        
+        function updateWind() {
+            environment.wind.active = document.getElementById('windToggle').checked;
+            environment.wind.force = parseFloat(document.getElementById('windForce').value);
+            environment.wind.angle = parseFloat(document.getElementById('windAngle').value);
+        }
+
+        function toggleCoriolisEffect() {
+            coriolisEffectEnabled = !coriolisEffectEnabled;
+            document.getElementById("toggleCoriolis").textContent = coriolisEffectEnabled ? "Выключить кориолис" : "Включить кориолис";
+            environment.coriolisEffectEnabled = coriolisEffectEnabled;
+        }
+        
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Отрисовка стены
+            if(wallExists) {
+                ctx.fillStyle = '#666';
+                ctx.fillRect(environment.wall.x, environment.wall.y, 
+                            environment.wall.width, environment.wall.height);
+            }
+        
+            bullets.forEach((bullet, index) => {
+                bullet.update();
+                bullet.draw();
+                if(!bullet.active) bullets.splice(index, 1);
+            });
+            const info = bullets[0] ? `
+                Скорость: ${bullets[0].getSpeed().toFixed(1)} px/c<br>
+                Угол: ${bullets[0].getAngle().toFixed(1)}°<br>
+                Стабильность: ${bullets[0].stable ? 'Да' : 'Нет'}
+            ` : 'Кликните для выстрела';
+            document.getElementById('info').innerHTML = info;
+        
+            requestAnimationFrame(animate);
+        }
+        
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        
+        canvas.onclick = (e) => {
+            bullets.push(new Bullet(100, canvas.height/2, e.clientX, e.clientY));
+        };
+        
+        document.getElementById('windToggle').onchange = updateWind;
+        document.getElementById('windForce').oninput = updateWind;
+        document.getElementById('windAngle').oninput = updateWind;
+        
+        animate();
+        </script>
+        </body>
+        </html>
+</body>
+</html>

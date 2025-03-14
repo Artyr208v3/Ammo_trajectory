@@ -1,0 +1,35 @@
+body {
+    margin: 0;
+    overflow: hidden;
+    background: #1e1e1e;
+    color: white;
+    font-family: Arial;
+}
+.controls {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    background: rgba(0,0,0,0.7);
+    padding: 10px;
+    border-radius: 5px;
+}
+.wind-controls {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    background: rgba(0,0,0,0.7);
+    padding: 10px;
+    border-radius: 5px;
+}
+button, input {
+    margin: 5px;
+    padding: 5px;
+    background: #444;
+    color: white;
+    border: 1px solid #666;
+}
+.info {
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+}
